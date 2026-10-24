@@ -25,11 +25,9 @@ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConsta
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_ALLOWABLE_UPLOAD_URIS;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_BINARY_UPLOAD_SIZE;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_CONCURRENT_REQUEST_COUNT;
-import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_MULTIPART_UPLOAD_PART_SIZE;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_SINGLE_PUT_UPLOAD_SIZE;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BlOB_META_DIR_NAME;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_META_KEY_PREFIX;
-import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE;
 import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_REF_KEY;
 
 import java.io.BufferedInputStream;
@@ -111,6 +109,11 @@ public class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {
     private static final Logger LOG = LoggerFactory.getLogger(AzureBlobStoreBackendV8.class);
     private static final Logger LOG_STREAMS_DOWNLOAD = LoggerFactory.getLogger("oak.datastore.download.streams");
     private static final Logger LOG_STREAMS_UPLOAD = LoggerFactory.getLogger("oak.datastore.upload.streams");
+
+    // OAK-12164: the legacy SDK backend keeps the part-size limits it advertised before OAK-11267.
+    // The shared AzureConstants values (256 KB / 4000 MB) belong to the v12 backend only.
+    static final long MIN_MULTIPART_UPLOAD_PART_SIZE = 1024L * 1024L * 10L; // 10MB
+    static final long MAX_MULTIPART_UPLOAD_PART_SIZE = 1024L * 1024L * 100L; // 100MB
 
     private Properties properties;
     private AzureBlobContainerProviderV8 azureBlobContainerProvider;
@@ -817,8 +820,8 @@ public class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {
 
     protected DataRecordUpload initiateHttpUpload(long maxUploadSizeInBytes, int maxNumberOfURIs, @NotNull final DataRecordUploadOptions options) {
         List<URI> uploadPartURIs = Lists.newArrayList();
-        long minPartSize = AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE;
-        long maxPartSize = AZURE_BLOB_MAX_MULTIPART_UPLOAD_PART_SIZE;
+        long minPartSize = MIN_MULTIPART_UPLOAD_PART_SIZE;
+        long maxPartSize = MAX_MULTIPART_UPLOAD_PART_SIZE;
 
         Validate.checkArgument(maxUploadSizeInBytes > 0L, "maxUploadSizeInBytes must be > 0");
         Validate.checkArgument(maxNumberOfURIs > 0 || maxNumberOfURIs == -1, "maxNumberOfURIs must either be > 0 or -1");
@@ -866,7 +869,7 @@ public class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {
                 }
             }
             else {
-                long maximalNumParts = (long) Math.ceil(((double) maxUploadSizeInBytes) / ((double) AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE));
+                long maximalNumParts = (long) Math.ceil(((double) maxUploadSizeInBytes) / ((double) MIN_MULTIPART_UPLOAD_PART_SIZE));
                 numParts = Math.min(maximalNumParts, AZURE_BLOB_MAX_ALLOWABLE_UPLOAD_URIS);
             }
 
