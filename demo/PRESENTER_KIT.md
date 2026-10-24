@@ -31,15 +31,17 @@ Rehearsal timings (fresh sessions, nothing pre-installed): see "Rehearsals" belo
 | **Mar 24, 2026** | OAK-12164 (Adobe): "min: 10M => 256k, max: 100M => 4G … This is causing OOMs on our side." | customer |
 | **Apr 15, 2026** | #2858: the whole module is reverted to 1.90.0. | |
 | **Aug 14, 2026** | #2989: the rework lands, +7,422 / −42, 35 files, **9 reviewers**, `Ai-Assisted-By: claude`. | 9 reviewers |
-| **Today** | Devin: crash → failing test → fix → passing upload → PR in **≈ N minutes** (rehearsal median). | |
+| **Today** | Devin: crash → failing test → fix → passing upload → PR in **≈ 5–7 minutes** (3 rehearsals: 6:47, 6:40 cold; 4:36 warm). | |
 
 Talking point: the IDE assistant helped *write* #2989; it could not *run* 1.92.0 against Azure, so the
 regression shipped. Devin's machine is the difference.
 
 ## Fallback: recording and PR
 
-- Screen recording of the best run: _(link filled in after recording)_
-- Best rehearsal PR (left open on purpose): _(filled in after rehearsals)_
+- Screen recording (crash → failing test → fix from PR #3 → passing test → identical upload succeeds), recorded by the
+  testing agent on the build VM, 8 MB mp4: https://devin-gtm.devinenterprise.com/attachments/2f074816-cd7c-4251-ad88-da3a570b4270/oak-demo-a-full-proof-edited.mp4
+  Key frames are in `demo/evidence/recording/` (01 OOM + heap graph … 05 SUCCESS + heap graph) with the terminal transcript.
+- Best rehearsal PR (left open on purpose): https://github.com/michael-cog-gtm/jackrabbit-oak/pull/3 (rehearsal 2, 6 min 40 s prompt → PR)
 - Replay of the original #2409 with Devin Review's verdict: https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1
 
 ## Devin Review on the original change (replay)
@@ -96,7 +98,10 @@ no longer `f14f6e3e` + the kit commit(s).
 |---|---|---|---|---|
 | 1 | https://devin-gtm.devinenterprise.com/sessions/20d3392b3fe046e785dec812bf5433a9 (cold VM, no blueprint yet) | **6 min 47 s** prompt → PR opened (00:27:58 → 00:34:45 UTC); final report 7 min 16 s | OOM reproduced, own Azurite-backed failing test, v8-only fix (3 files +83/−7), 548 tests green, 5.0 ACUs | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/2 (closed by reset.sh — branch name reused; evidence intact) |
 | 2 | https://devin-gtm.devinenterprise.com/sessions/bd84e88629e242d2a105c5265e648e34 (cold VM) | **6 min 40 s** prompt → PR opened (00:39:15 → 00:45:55 UTC); final report 9 min 29 s incl. CI wait | Same shape; regression test added to `AzureBlobStoreBackendV8Test`, 548 tests green, 5.4 ACUs | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/3 **(fallback PR, left open)** |
-| 3 | _(tbd)_ | | | |
+| 3 | https://devin-gtm.devinenterprise.com/sessions/8ef1f062d48c447cac3297d6d5af7b9c (**warm blueprint snapshot**) | **4 min 36 s** prompt → PR opened (01:04:02 → 01:08:38 UTC); final report 4 min 56 s, CI green at 7 min 06 s | Same shape: OOM repro, regression test in `AzureBlobStoreBackendV8Test`, v8-only fix (2 files +36/−7), 548 tests green | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/4 (open; second fallback) |
+
+Median prompt → PR: **6 min 40 s** cold, **4 min 36 s** warm. All three runs fit the 8-minute slot; the warm run leaves ~3 min for narration.
+Every run raised the same legitimate follow-up (190 TiB max-binary cap) and asked instead of widening the PR.
 
 ## Links
 
