@@ -1,0 +1,24 @@
+azurite up on port 10000
+built oak-blob-cloud-azure 1.91-SNAPSHOT and demo client
+Binary: /tmp/oak-demo-2g.bin (2,147,483,648 bytes = 2048 MB), JVM max heap 1024 MB
+[heap    0.0s] |..................................................|     3 /  1024 MB   0%  starting AzureDataStore
+AzureDataStore backend: org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8
+[heap    0.5s] |##................................................|    33 /  1024 MB   3%  initiateDataRecordUpload
+Server advertised: minPartSize=256 KB maxPartSize=4000 MB uploadURIs=8192
+Client plan (BinaryUpload javadoc algorithm): 1 part(s) of 2 GB
+[heap    1.0s] |###################...............................|   399 /  1024 MB  38%  PUT part 1/1 (2 GB)
+[heap    1.1s] |#############.....................................|   269 /  1024 MB  26%  PUT part 1/1 (2 GB)
+
+RESULT: CRASH - java.lang.OutOfMemoryError: Java heap space while uploading a part of the size Oak advertised; peak heap 399 MB of 1024 MB
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.Arrays.copyOf(Arrays.java:3537)
+	at java.base/java.io.ByteArrayOutputStream.ensureCapacity(ByteArrayOutputStream.java:100)
+	at java.base/java.io.ByteArrayOutputStream.write(ByteArrayOutputStream.java:130)
+	at java.base/sun.net.www.http.PosterOutputStream.write(PosterOutputStream.java:78)
+	at org.apache.commons.io.IOUtils.copyLarge(IOUtils.java:1743)
+	at org.apache.commons.io.IOUtils.copy(IOUtils.java:1385)
+	at org.apache.commons.io.IOUtils.copyLarge(IOUtils.java:1715)
+	at org.apache.commons.io.IOUtils.copy(IOUtils.java:1364)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.httpPut(LargeUpload.java:169)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.run(LargeUpload.java:117)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.main(LargeUpload.java:79)

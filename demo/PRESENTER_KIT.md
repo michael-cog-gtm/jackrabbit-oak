@@ -44,13 +44,27 @@ regression shipped. Devin's machine is the difference.
 
 ## Devin Review on the original change (replay)
 
-_(verdict pasted verbatim once the review completes)_
+Devin Review ran on PR #1 (the exact #2409 diff, 45 files) at 00:24 UTC on 2026-10-24 and finished in
+about 2 minutes. Verbatim finding titles (full text in `demo/review/`):
+
+- **[bug]** Blob enumeration includes metadata records — `AzureBlobStoreBackend.java:388-405`
+- **[bug]** Large binary uploads use oversized blocks — `AzureBlobStoreBackend.java:286-290`
+  ("When a file exceeds 4000 MiB, `uploadBlob` sets its block size to the entire file length. Azure limits each staged block to 4000 MiB, so the binary upload fails.")
+- **[bug]** Connection strings bypass the configured proxy — `AzureBlobContainerProvider.java:164-166`
+- **[security]** Verbose logs expose Azure SAS tokens — `AzureHttpRequestLoggingPolicy.java:58-62`
+- **[flag]** Delegation-key request loses clock-skew allowance — `AzureBlobContainerProvider.java:241-242`
+
+It did **not** flag the OAK-12164 regression itself (the v8 backend picking up the shared 256 KB / 4000 MB
+limits). Say so: the honest point is that a reviewer that cannot run the code can miss what a machine that
+runs it finds in two minutes — which is exactly step 2 of the live run. (The "oversized blocks" bug it did
+find is the sibling issue on the v12 write path.)
 
 ## Reset between runs
 
 ```
-demo/reset.sh            # parks issue/OAK-12164 (+ its PR, kept open) under rehearsal/<stamp>/…, checks demo/pre-fix
-demo/reset.sh --delete   # deletes the rehearsal branch instead
+demo/reset.sh            # archives issue/OAK-12164* under rehearsal/<stamp>/… and deletes them (their PRs close but stay readable);
+                         # never touches the fallback PR branch (KEEP_BRANCHES); checks demo/pre-fix
+demo/reset.sh --delete   # same without the archive copy
 ```
 Needs `gh` logged in to the `michael-cog-gtm` org. The script refuses to continue if `demo/pre-fix` is
 no longer `f14f6e3e` + the kit commit(s).
@@ -67,13 +81,21 @@ no longer `f14f6e3e` + the kit commit(s).
 - If Devin opens the PR against `trunk` instead of `demo/pre-fix`, the diff is unreadable (trunk already
   has the rework). `tools/demo/README.md` tells it to target `demo/pre-fix`.
 - Do **not** merge the fix PR; it is the artifact.
+- A session cannot be started "on a branch", so the typed prompt is preceded by one line:
+  `Repository michael-cog-gtm/jackrabbit-oak, branch demo/pre-fix.` (that is how all rehearsals were run).
+- Branch-name collision: Devin follows AGENTS.md and picks `issue/OAK-12164`. If that name still exists on GitHub
+  (or was *renamed* — GitHub keeps a redirect), the push collides and Devin improvises. Always run `demo/reset.sh`
+  first; it deletes the name outright. The fallback PR #3 lives on `issue/OAK-12164-v8-part-size` so it never collides.
+- Devin Review on the fix PR raises a legitimate follow-up (v8 still uses the shared 190 TiB max-binary cap vs.
+  100 MB × 50,000 URIs ≈ 4.77 TiB; pre-#2409 it was 4.75 TB). Devin reports it and asks instead of silently widening
+  the PR — a good moment to show restraint. Michael's call whether to say "yes, do it" live.
 
 ## Rehearsals
 
 | # | Session | Wall time | Outcome | PR |
 |---|---|---|---|---|
-| 1 | _(tbd)_ | | | |
-| 2 | _(tbd)_ | | | |
+| 1 | https://devin-gtm.devinenterprise.com/sessions/20d3392b3fe046e785dec812bf5433a9 (cold VM, no blueprint yet) | **6 min 47 s** prompt → PR opened (00:27:58 → 00:34:45 UTC); final report 7 min 16 s | OOM reproduced, own Azurite-backed failing test, v8-only fix (3 files +83/−7), 548 tests green, 5.0 ACUs | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/2 (closed by reset.sh — branch name reused; evidence intact) |
+| 2 | https://devin-gtm.devinenterprise.com/sessions/bd84e88629e242d2a105c5265e648e34 (cold VM) | **6 min 40 s** prompt → PR opened (00:39:15 → 00:45:55 UTC); final report 9 min 29 s incl. CI wait | Same shape; regression test added to `AzureBlobStoreBackendV8Test`, 548 tests green, 5.4 ACUs | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/3 **(fallback PR, left open)** |
 | 3 | _(tbd)_ | | | |
 
 ## Links

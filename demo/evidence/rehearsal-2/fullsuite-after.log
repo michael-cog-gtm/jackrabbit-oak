@@ -1,0 +1,24 @@
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.594 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.UtilsTest
+[INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstantsTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.TestAzureDS
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.650 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureBlobContainerProviderTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.385 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8ContainerOperationsTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8BuilderTest
+[INFO] Tests run: 43, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.UtilsV8Test
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.131 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8ErrorConditionsTest
+[WARNING] Tests run: 39, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 1.133 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8Test
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8SasGenerationTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.109 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8TokenManagementTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.103 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8AuthenticationTest
+[INFO] Tests run: 24, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8ComprehensiveTest
+[WARNING] Tests run: 86, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 3.643 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8Test
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8HeaderManagementTest
+[INFO] Tests run: 69, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.358 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStoreTest
+[INFO] Tests run: 97, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.010 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureBlobStoreBackendTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.253 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureHttpRequestLoggingPolicyTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0.001 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataRecordAccessProviderTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataRecordAccessProviderCDNTest
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.TestAzureDsCacheOff
+[WARNING] Tests run: 1, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 0 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.TestAzureDSWithSmallCache
+[WARNING] Tests run: 548, Failures: 0, Errors: 0, Skipped: 7
+[INFO] BUILD SUCCESS
