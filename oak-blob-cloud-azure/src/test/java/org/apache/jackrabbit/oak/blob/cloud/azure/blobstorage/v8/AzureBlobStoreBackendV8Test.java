@@ -1610,8 +1610,8 @@ public class AzureBlobStoreBackendV8Test {
       org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadOptions uploadOptions =
           org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadOptions.DEFAULT;
 
-      // Use a larger file size to ensure we get 2 parts (2 * 256KB = 512KB)
-      long uploadSize = 2L * 256L * 1024L; // 512KB to ensure 2 parts
+      // Twice the v8 minimum part size so the request is split into exactly 2 parts
+      long uploadSize = 2L * AzureBlobStoreBackendV8.MIN_MULTIPART_UPLOAD_PART_SIZE;
       org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUpload upload =
           backend.initiateHttpUpload(uploadSize, 2, uploadOptions);
       assertNotNull("Upload should not be null when expiry is enabled", upload);
@@ -2195,6 +2195,29 @@ public class AzureBlobStoreBackendV8Test {
       // Various exceptions may be thrown depending on configuration
       assertTrue("Exception handling for large sizes: " + e.getMessage(), true);
     }
+  }
+
+  @Test
+  public void testInitiateHttpUploadKeepsV8PartSizeLimits() throws Exception {
+    // OAK-12164: a 2 GB upload must be advertised with the legacy 10 MB / 100 MB part-size limits,
+    // not the v12 values (256 KB / 4000 MB) which make clients buffer the whole binary as one part
+    createBlobContainer();
+
+    AzureBlobStoreBackendV8 backend = new AzureBlobStoreBackendV8();
+    Properties props = getConfigurationWithConnectionString();
+    props.setProperty(AzureConstants.PRESIGNED_HTTP_UPLOAD_URI_EXPIRY_SECONDS, "1800");
+    backend.setProperties(props);
+    backend.init();
+
+    long twoGB = 2048L * 1024L * 1024L;
+    org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUpload upload =
+        backend.initiateHttpUpload(twoGB, -1,
+            org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadOptions.DEFAULT);
+
+    assertEquals("v8 min part size", 10L * 1024L * 1024L, upload.getMinPartSize());
+    assertEquals("v8 max part size", 100L * 1024L * 1024L, upload.getMaxPartSize());
+    assertTrue("2 GB must be split into at least 21 parts of at most 100 MB, got " + upload.getUploadURIs().size(),
+        upload.getUploadURIs().size() >= 21);
   }
 
   @Test
