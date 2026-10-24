@@ -20,6 +20,7 @@ by the build session https://devin-gtm.devinenterprise.com/sessions/3173d5f14f82
 | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1 | Replay of #2409 for Devin Review — never merge |
 | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/2 | Rehearsal 1 fix PR (closed by `reset.sh` to free `issue/OAK-12164`; branch archived as `rehearsal/20261024-005021/issue-OAK-12164`) |
 | https://github.com/michael-cog-gtm/jackrabbit-oak/pull/3 | Rehearsal 2 fix PR — **fallback, keep open, never merge** (`issue/OAK-12164-v8-part-size` → `demo/pre-fix`) |
+| https://github.com/michael-cog-gtm/jackrabbit-oak/pull/4 | Rehearsal 3 fix PR — open, second fallback (`issue/OAK-12164-v8-limits` → `demo/pre-fix`) |
 
 ## Devin sessions
 
@@ -28,7 +29,7 @@ by the build session https://devin-gtm.devinenterprise.com/sessions/3173d5f14f82
 | https://devin-gtm.devinenterprise.com/sessions/3173d5f14f82437eabb5db678769cd42 | build session (this kit) |
 | https://devin-gtm.devinenterprise.com/sessions/20d3392b3fe046e785dec812bf5433a9 | rehearsal 1 |
 | https://devin-gtm.devinenterprise.com/sessions/bd84e88629e242d2a105c5265e648e34 | rehearsal 2 |
-| _(rehearsal 3 added below)_ | |
+| https://devin-gtm.devinenterprise.com/sessions/8ef1f062d48c447cac3297d6d5af7b9c | rehearsal 3 (warm snapshot) |
 
 ## Blueprint
 
@@ -37,7 +38,8 @@ by the build session https://devin-gtm.devinenterprise.com/sessions/3173d5f14f82
 
 ## Recordings
 
-- _(added after the testing-agent recording)_
+- Proof video (testing agent, build session): https://devin-gtm.devinenterprise.com/attachments/2f074816-cd7c-4251-ad88-da3a570b4270/oak-demo-a-full-proof-edited.mp4
+- Key screenshots + transcript committed under `demo/evidence/recording/`
 
 ## Automations / playbooks
 

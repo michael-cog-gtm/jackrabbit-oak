@@ -1,0 +1,40 @@
+azurite already running on port 10000
+built oak-blob-cloud-azure 1.91-SNAPSHOT and demo client
+Binary: /tmp/oak-demo-2g.bin (2,147,483,648 bytes = 2048 MB), JVM max heap 1024 MB
+[heap    0.0s] |..................................................|     3 /  1024 MB   0%  starting AzureDataStore
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStore - Starting blob store using Azure SDK 8
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Using concurrentRequestsPerOperation=5
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Reusing existing container. containerName=oak-demo
+[main] INFO org.apache.jackrabbit.oak.plugins.blob.CompositeDataStoreCache - Creating composite cache with size: 0 (0 B), split as uploadSize: 0 (0 B), fileCacheSize: 0 (0 B), uploadSplitPercentage: 10, uploadThreads: 10
+AzureDataStore backend: org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8
+Server advertised: minPartSize=10 MB maxPartSize=100 MB uploadURIs=205
+Client plan (BinaryUpload javadoc algorithm): 21 part(s) of 100 MB
+[heap    0.5s] |##############....................................|   295 /  1024 MB  28%  PUT part 1/21 (100 MB)
+[heap    1.0s] |#####################.............................|   430 /  1024 MB  42%  PUT part 2/21 (100 MB)
+[heap    1.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 2/21 (100 MB)
+[heap    2.0s] |#######################...........................|   464 /  1024 MB  45%  PUT part 3/21 (100 MB)
+[heap    2.5s] |#############.....................................|   271 /  1024 MB  26%  PUT part 4/21 (100 MB)
+[heap    3.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 5/21 (100 MB)
+[heap    3.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 6/21 (100 MB)
+[heap    4.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 7/21 (100 MB)
+[heap    4.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 8/21 (100 MB)
+[heap    5.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 9/21 (100 MB)
+[heap    5.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 10/21 (100 MB)
+[heap    6.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 11/21 (100 MB)
+[heap    6.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 12/21 (100 MB)
+[heap    7.0s] |################..................................|   336 /  1024 MB  32%  PUT part 13/21 (100 MB)
+[heap    7.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 13/21 (100 MB)
+[heap    8.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 14/21 (100 MB)
+[heap    8.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 15/21 (100 MB)
+[heap    9.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 16/21 (100 MB)
+[heap    9.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 17/21 (100 MB)
+[heap   10.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 18/21 (100 MB)
+[heap   10.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 19/21 (100 MB)
+[heap   11.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 20/21 (100 MB)
+[heap   11.5s] |################..................................|   336 /  1024 MB  32%  completeDataRecordUpload
+Record 8e6a574d-02b9-4b68-b70c-f0db2088cea3-1792804035004 length=2,147,483,648 bytes
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8 - Refresh token executor service shutdown completed
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - AzureBlobBackend closed.
+
+RESULT: SUCCESS - 2048 MB stored through AzureDataStore; peak heap 464 MB of 1024 MB
+[heap   11.5s] |################..................................|   337 /  1024 MB  32%  done

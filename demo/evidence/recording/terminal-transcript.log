@@ -1,0 +1,262 @@
+Script started on 2026-10-24 00:57:03+00:00 [TERM="xterm-256color" TTY="/dev/pts/2" COLUMNS="133" LINES="29"]
+[H[2J[3JDEMO A  |  Crash it, then don't
+Apache Jackrabbit Oak  |  real AzureDataStore + Azurite
+2 GB binary / 1 GB JVM heap / identical upload command
+
+[?2004h[1;36moak [demo/pre-fix] $[0m SECONDS=0; git log --oneline -2; printf '\n[step 1a] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[33mfb4763f74d[m[33m ([m[1;36mHEAD -> [m[1;32mdemo/pre-fix[m[33m, [m[1;31morigin/demo/pre-fix[m[33m)[m Demo kit: rehearsal 1+2 results, Devin Review verdict on PR #1, reset.sh copy+delete fix
+[33mb1df8ca83c[m Demo kit: crash tool (tools/demo), presenter kit and reset script (demo/)
+
+[step 1a] elapsed=0s exit=0
+[?2004h[1;36moak [demo/pre-fix] $[0m SECONDS=0; cat tools/demo/README.md | head -40; printf '\n[step 1b] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l# tools/demo — large-binary upload against a real Azure emulator
+
+Stores one large binary (default 2 GB) through Oak's real `AzureDataStore` (legacy Azure SDK v8
+backend) into a local [Azurite](https://github.com/Azure/Azurite) blob emulator, with the JVM heap
+capped at 1 GB, and prints a live heap graph while it runs.
+
+```
+tools/demo/upload.sh                 # start Azurite, build, upload 2 GB with -Xmx1g
+tools/demo/upload.sh 512m            # different binary size
+HEAP=2g tools/demo/upload.sh         # different heap cap
+SKIP_BUILD=1 tools/demo/upload.sh    # reuse the last build
+tools/demo/azurite.sh reset          # wipe the emulator
+```
+
+`build.sh` installs Maven 3.9.9 into `~/tools` and a Maven Central mirror into `~/.m2/settings.xml`
+if they are missing, builds `oak-blob-cloud-azure` (and the Oak modules it depends on) into `~/.m2`,
+then compiles the small client in this directory. Needs JDK 11+ and Docker.
+
+## What the client does
+
+`LargeUpload` is a direct-binary-access client written against the documented
+`org.apache.jackrabbit.api.binary.BinaryUpload` algorithm, the same contract AEM's upload clients
+follow:
+
+1. `AzureDataStore.initiateDataRecordUpload(size, -1)` — Oak answers with the min/max part size
+   and a list of pre-signed upload URLs.
+2. The client picks the part size the javadoc recommends (`maxPartSize`, capped at the file size)
+   and PUTs each part to its URL with a plain `java.net.HttpURLConnection`.
+3. `AzureDataStore.completeDataRecordUpload(token)` — Oak commits the block list and returns the
+   record; the client checks the stored length.
+
+**Honesty note.** The `OutOfMemoryError` happens in step 2, inside the client's HTTP layer: like
+AEM's upload clients, it buffers each part in memory before sending it, so it can only ever hold a
+part that fits in the heap. Oak's server-side code does not allocate the part. What Oak controls is
+the *advertised* part size, and that is the regression: a backend that says "parts may be up to
+4000 MB" makes a compliant client try to buffer a 2 GB part; a backend that says "at most 100 MB"
+makes the same client send 21 parts of 100 MB. The stack trace the tool prints is the real one.
+
+## Branch note
+
+
+[step 1b] elapsed=0s exit=0
+[?2004h[1;36moak [demo/pre-fix] $[0m clear; SECONDS=0; tools/demo/upload.sh; printf '\n[step 2: CRASH] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[H[2J[3Jazurite already running on port 10000
+[0m[0mbuilt oak-blob-cloud-azure 1.91-SNAPSHOT and demo client
+Binary: /tmp/oak-demo-2g.bin (2,147,483,648 bytes = 2048 MB), JVM max heap 1024 MB
+[32m[heap    0.0s] |..................................................|     3 /  1024 MB   0%  starting AzureDataStore[0m
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStore - Starting blob store using Azure SDK 8
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Using concurrentRequestsPerOperation=5
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Reusing existing container. containerName=oak-demo
+[main] INFO org.apache.jackrabbit.oak.plugins.blob.CompositeDataStoreCache - Creating composite cache with size: 0 (0 B), split as uploadSize: 0 (0 B), fileCacheSize: 0 (0 B), uploadSplitPercentage: 10, uploadThreads: 10
+AzureDataStore backend: org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8
+[32m[heap    0.5s] |###...............................................|    55 /  1024 MB   5%  initiateDataRecordUpload[0m
+Server advertised: minPartSize=256 KB maxPartSize=4000 MB uploadURIs=8192
+Client plan (BinaryUpload javadoc algorithm): 1 part(s) of 2 GB
+[32m[heap    1.0s] |###################...............................|   399 /  1024 MB  38%  PUT part 1/1 (2 GB)[0m
+[32m[heap    1.2s] |#############.....................................|   269 /  1024 MB  26%  PUT part 1/1 (2 GB)[0m
+
+RESULT: CRASH - java.lang.OutOfMemoryError: Java heap space while uploading a part of the size Oak advertised; peak heap 399 MB of 1024 MB
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.util.Arrays.copyOf(Arrays.java:3537)
+	at java.base/java.io.ByteArrayOutputStream.ensureCapacity(ByteArrayOutputStream.java:100)
+	at java.base/java.io.ByteArrayOutputStream.write(ByteArrayOutputStream.java:130)
+	at java.base/sun.net.www.http.PosterOutputStream.write(PosterOutputStream.java:78)
+	at org.apache.commons.io.IOUtils.copyLarge(IOUtils.java:1743)
+	at org.apache.commons.io.IOUtils.copy(IOUtils.java:1385)
+	at org.apache.commons.io.IOUtils.copyLarge(IOUtils.java:1715)
+	at org.apache.commons.io.IOUtils.copy(IOUtils.java:1364)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.httpPut(LargeUpload.java:169)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.run(LargeUpload.java:117)
+	at org.apache.jackrabbit.oak.demo.LargeUpload.main(LargeUpload.java:79)
+
+[step 2: CRASH] elapsed=12s exit=3
+[?2004h[1;36moak [demo/pre-fix] $[0m clear; SECONDS=0; cp demo/reference/AzureDataStoreV8PartSizeTest.java oak-blob-cloud-azure/src/test/java/org/apa che/jackrabbit/oak/blob/cloud/azure/blobstorage/
+[?2004l[H[2J[3J[?2004h[1;36moak [demo/pre-fix] $[0m PATH=~/tools/apache-maven-3.9.9/bin:$PATH mvn -q -o test -pl oak-blob-cloud-azure -Dtest=AzureDataStoreV8PartSiz eTest -Dsurefire.failIfNoSpecifiedTests=false -Drat.skip=true -Dskip.coverage=true -Dbaseline.skip=true; printf '\n[step 3: FAILING T EST] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[[1;31mERROR[m] [1;31mTests [0;1mrun: [0;1m1[m, [1;31mFailures: [0;1;31m1[m, Errors: 0, Skipped: 0, Time elapsed: 2.497 s[1;31m <<< FAILURE![m -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.[1mAzureDataStoreV8PartSizeTest[m
+[[1;31mERROR[m] org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStoreV8PartSizeTest.v8PartSizeLimitsFor2GbUpload -- Time elapsed: 1.044 s <<< FAILURE!
+java.lang.AssertionError: v8 min part size expected:<10485760> but was:<262144>
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:647)
+	at org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStoreV8PartSizeTest.v8PartSizeLimitsFor2GbUpload(AzureDataStoreV8PartSizeTest.java:63)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzuriteDockerRule$1.evaluate(AzuriteDockerRule.java:87)
+	at org.junit.rules.RunRules.evaluate(RunRules.java:20)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.execute(JUnit4Provider.java:316)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeWithRerun(JUnit4Provider.java:240)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:214)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:155)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+
+[[1;31mERROR[m] [1;31mFailures: [m
+[[1;31mERROR[m] [1;31m  AzureDataStoreV8PartSizeTest.v8PartSizeLimitsFor2GbUpload:63 v8 min part size expected:<10485760> but was:<262144>[m
+[[1;31mERROR[m] [1;31mTests run: 1, Failures: 1, Errors: 0, Skipped: 0[m
+[[1;31mERROR[m] Failed to execute goal [32morg.apache.maven.plugins:maven-surefire-plugin:3.5.4:test[m [1m(default-test)[m on project [36moak-blob-cloud-azure[m: [1;31mThere are test failures.[m
+[[1;31mERROR[m] [1;31m[m
+[[1;31mERROR[m] [1;31mSee /home/ubuntu/wt/prefix/oak-blob-cloud-azure/target/surefire-reports for the individual test results.[m
+[[1;31mERROR[m] [1;31mSee dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.[m
+[[1;31mERROR[m] -> [1m[Help 1][m
+[[1;31mERROR[m] 
+[[1;31mERROR[m] To see the full stack trace of the errors, re-run Maven with the [1m-e[m switch.
+[[1;31mERROR[m] Re-run Maven using the [1m-X[m switch to enable full debug logging.
+[[1;31mERROR[m] 
+[[1;31mERROR[m] For more information about the errors and possible solutions, please read the following articles:
+[[1;31mERROR[m] [1m[Help 1][m http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[0m[0m
+[step 3: FAILING TEST] elapsed=16s exit=1
+[?2004h[1;36moak [demo/pre-fix] $[0m rm oak-blob-cloud-azure/src/test/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/AzureDataStoreV8Par tSizeTest.java
+[?2004l[?2004h[1;36moak [demo/pre-fix] $[0m git status --short
+[?2004l[?2004h[1;36moak [demo/pre-fix] $[0m clear; SECONDS=0; git checkout issue/OAK-12164-v8-part-size; git log --oneline -1; git diff b1df8ca83c --stat; p rintf '\n[step 4a: FIX] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[H[2J[3JSwitched to branch 'issue/OAK-12164-v8-part-size'
+Your branch is up to date with 'origin/issue/OAK-12164-v8-part-size'.
+[33m88a414a8e3[m[33m ([m[1;36mHEAD -> [m[1;32missue/OAK-12164-v8-part-size[m[33m, [m[1;31morigin/issue/OAK-12164-v8-part-size[m[33m)[m OAK-12164: restore 10 MB / 100 MB multipart part-size limits in the v8 Azure backend
+ .../java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8.java    | 13 [32m++++++++[m[31m-----[m
+ .../org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8Test.java     | 27 [32m+++++++++++++++++++++++++[m[31m--[m
+ 2 files changed, 33 insertions(+), 7 deletions(-)
+
+[step 4a: FIX] elapsed=0s exit=0
+[?2004h[1;36moak [issue/OAK-12164-v8-part-size] $[0m SECONDS=0; git diff b1df8ca83c -- oak-blob-cloud-azure/src/main; printf '\n[step 4b: SOURCE DIFF ] elapsed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[1mdiff --git a/oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8.java b/oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8.java[m
+[1mindex c295f6b740..4e2ff8b8c5 100644[m
+[1m--- a/oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8.java[m
+[1m+++ b/oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/v8/AzureBlobStoreBackendV8.java[m
+[36m@@ -25,11 +25,9 @@[m [mimport static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConsta[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_ALLOWABLE_UPLOAD_URIS;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_BINARY_UPLOAD_SIZE;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_CONCURRENT_REQUEST_COUNT;[m
+[31m-import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_MULTIPART_UPLOAD_PART_SIZE;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MAX_SINGLE_PUT_UPLOAD_SIZE;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BlOB_META_DIR_NAME;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_META_KEY_PREFIX;[m
+[31m-import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE;[m
+ import static org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureConstants.AZURE_BLOB_REF_KEY;[m
+ [m
+ import java.io.BufferedInputStream;[m
+[36m@@ -112,6 +110,11 @@[m [mpublic class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {[m
+     private static final Logger LOG_STREAMS_DOWNLOAD = LoggerFactory.getLogger("oak.datastore.download.streams");[m
+     private static final Logger LOG_STREAMS_UPLOAD = LoggerFactory.getLogger("oak.datastore.upload.streams");[m
+ [m
+[32m+[m[32m    // OAK-12164: the legacy SDK backend keeps the part-size limits it advertised before OAK-11267.[m
+[32m+[m[32m    // The shared AzureConstants values (256 KB / 4000 MB) belong to the v12 backend only.[m
+[32m+[m[32m    static final long MIN_MULTIPART_UPLOAD_PART_SIZE = 1024L * 1024L * 10L; // 10MB[m
+[32m+[m[32m    static final long MAX_MULTIPART_UPLOAD_PART_SIZE = 1024L * 1024L * 100L; // 100MB[m
+[32m+[m
+     private Properties properties;[m
+     private AzureBlobContainerProviderV8 azureBlobContainerProvider;[m
+     private int concurrentRequestCount = AZURE_BLOB_DEFAULT_CONCURRENT_REQUEST_COUNT;[m
+[36m@@ -817,8 +820,8 @@[m [mpublic class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {[m
+ [m
+     protected DataRecordUpload initiateHttpUpload(long maxUploadSizeInBytes, int maxNumberOfURIs, @NotNull final DataRecordUploadOptions options) {[m
+         List<URI> uploadPartURIs = Lists.newArrayList();[m
+[31m-        long minPartSize = AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE;[m
+[31m-        long maxPartSize = AZURE_BLOB_MAX_MULTIPART_UPLOAD_PART_SIZE;[m
+[32m+[m[32m        long minPartSize = MIN_MULTIPART_UPLOAD_PART_SIZE;[m
+[32m+[m[32m        long maxPartSize = MAX_MULTIPART_UPLOAD_PART_SIZE;[m
+ [m
+         Validate.checkArgument(maxUploadSizeInBytes > 0L, "maxUploadSizeInBytes must be > 0");[m
+         Validate.checkArgument(maxNumberOfURIs > 0 || maxNumberOfURIs == -1, "maxNumberOfURIs must either be > 0 or -1");[m
+[36m@@ -866,7 +869,7 @@[m [mpublic class AzureBlobStoreBackendV8 extends AbstractAzureBlobStoreBackend {[m
+                 }[m
+             }[m
+             else {[m
+[31m-                long maximalNumParts = (long) Math.ceil(((double) maxUploadSizeInBytes) / ((double) AZURE_BLOB_MIN_MULTIPART_UPLOAD_PART_SIZE));[m
+[32m+[m[32m                long maximalNumParts = (long) Math.ceil(((double) maxUploadSizeInBytes) / ((double) MIN_MULTIPART_UPLOAD_PART_SIZE));[m
+                 numParts = Math.min(maximalNumParts, AZURE_BLOB_MAX_ALLOWABLE_UPLOAD_URIS);[m
+             }[m
+ [m
+
+[step 4b: SOURCE DIFF] elapsed=0s exit=0
+[?2004h[1;36moak [issue/OAK-12164-v8-part-size] $[0m clear; SECONDS=0; PATH=~/tools/apache-maven-3.9.9/bin:$PATH mvn -q -o test -pl oak-blob-cloud-az ure -Dtest=AzureBlobStoreBackendV8Test -Drat.skip=true -Dskip.coverage=true -Dbaseline.skip=true; printf '\n[step 5: FIXED TEST] elap sed=%ss exit=%s\n' "$SECONDS" "$?"
+[?2004l[H[2J[3J[0m[0m
+[step 5: FIXED TEST] elapsed=12s exit=0
+[?2004h[1;36moak [issue/OAK-12164-v8-part-size] $[0m cat oak-blob-cloud-azure/target/surefire-reports/org.apache.jackrabbit.oak.blob.cloud.azure.blob storage.v8.AzureBlobStoreBackendV8Test.txt
+[?2004l-------------------------------------------------------------------------------
+Test set: org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8Test
+-------------------------------------------------------------------------------
+Tests run: 86, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 4.242 s -- in org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8Test
+[?2004h[1;36moak [issue/OAK-12164-v8-part-size] $[0m clear; SECONDS=0; tools/demo/upload.sh; printf '\n[step 6: FIXED UPLOAD] elapsed=%ss exit=%s\n'  "$SECONDS" "$?"
+[?2004l[H[2J[3Jazurite already running on port 10000
+[0m[0mbuilt oak-blob-cloud-azure 1.91-SNAPSHOT and demo client
+Binary: /tmp/oak-demo-2g.bin (2,147,483,648 bytes = 2048 MB), JVM max heap 1024 MB
+[32m[heap    0.0s] |..................................................|     3 /  1024 MB   0%  starting AzureDataStore[0m
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.AzureDataStore - Starting blob store using Azure SDK 8
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Using concurrentRequestsPerOperation=5
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - Reusing existing container. containerName=oak-demo
+[main] INFO org.apache.jackrabbit.oak.plugins.blob.CompositeDataStoreCache - Creating composite cache with size: 0 (0 B), split as uploadSize: 0 (0 B), fileCacheSize: 0 (0 B), uploadSplitPercentage: 10, uploadThreads: 10
+AzureDataStore backend: org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8
+Server advertised: minPartSize=10 MB maxPartSize=100 MB uploadURIs=205
+Client plan (BinaryUpload javadoc algorithm): 21 part(s) of 100 MB
+[32m[heap    0.5s] |##############....................................|   295 /  1024 MB  28%  PUT part 1/21 (100 MB)[0m
+[32m[heap    1.0s] |##############....................................|   295 /  1024 MB  28%  PUT part 1/21 (100 MB)[0m
+[32m[heap    1.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 2/21 (100 MB)[0m
+[32m[heap    2.0s] |#######################...........................|   464 /  1024 MB  45%  PUT part 3/21 (100 MB)[0m
+[32m[heap    2.5s] |#######################...........................|   464 /  1024 MB  45%  PUT part 3/21 (100 MB)[0m
+[32m[heap    3.0s] |#############.....................................|   270 /  1024 MB  26%  PUT part 4/21 (100 MB)[0m
+[32m[heap    3.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 5/21 (100 MB)[0m
+[32m[heap    4.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 6/21 (100 MB)[0m
+[32m[heap    4.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 7/21 (100 MB)[0m
+[32m[heap    5.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 8/21 (100 MB)[0m
+[32m[heap    5.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 9/21 (100 MB)[0m
+[32m[heap    6.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 9/21 (100 MB)[0m
+[32m[heap    6.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 10/21 (100 MB)[0m
+[32m[heap    7.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 11/21 (100 MB)[0m
+[32m[heap    7.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 12/21 (100 MB)[0m
+[32m[heap    8.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 13/21 (100 MB)[0m
+[32m[heap    8.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 14/21 (100 MB)[0m
+[32m[heap    9.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 15/21 (100 MB)[0m
+[32m[heap    9.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 16/21 (100 MB)[0m
+[32m[heap   10.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 17/21 (100 MB)[0m
+[32m[heap   10.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 18/21 (100 MB)[0m
+[32m[heap   11.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 18/21 (100 MB)[0m
+[32m[heap   11.5s] |##########........................................|   200 /  1024 MB  19%  PUT part 19/21 (100 MB)[0m
+[32m[heap   12.0s] |##########........................................|   200 /  1024 MB  19%  PUT part 20/21 (100 MB)[0m
+[32m[heap   12.5s] |################..................................|   337 /  1024 MB  32%  completeDataRecordUpload[0m
+Record ad09bb78-3420-4835-8cfe-84f4da58c938-1792803665463 length=2,147,483,648 bytes
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobContainerProviderV8 - Refresh token executor service shutdown completed
+[main] INFO org.apache.jackrabbit.oak.blob.cloud.azure.blobstorage.v8.AzureBlobStoreBackendV8 - AzureBlobBackend closed.
+
+RESULT: SUCCESS - 2048 MB stored through AzureDataStore; peak heap 464 MB of 1024 MB
+[32m[heap   12.5s] |################..................................|   337 /  1024 MB  32%  done[0m
+
+[step 6: FIXED UPLOAD] elapsed=20s exit=0
+[?2004h[1;36moak [issue/OAK-12164-v8-part-size] $[0m SECONDS=0; git checkout demo/pre-fix; git status --short; printf '\n[step 7: RESTORE] elapsed=%s s exit=%s\n' "$SECONDS" "$?"
+[?2004lSwitched to branch 'demo/pre-fix'
+Your branch is up to date with 'origin/demo/pre-fix'.
+
+[step 7: RESTORE] elapsed=0s exit=0
+[?2004h[1;36moak [demo/pre-fix] $[0m 

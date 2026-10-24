@@ -38,3 +38,17 @@
   session's push to `issue/OAK-12164` re-attached parked PR #2 and the name was "blocked"; the child briefly closed #2 freeing it,
   restored it, and used `issue/OAK-12164-v8-part-size`. Fix: park by copying the ref (`git push origin issue/OAK-12164:rehearsal/<stamp>/…`)
   then deleting the original (closes that PR — a closed PR keeps its diff/evidence). Fallback PR = #3, whose branch name does not collide.
+- 00:55–01:05 UTC testing agent recorded the proof video on this VM (https://devin-gtm.devinenterprise.com/attachments/2f074816-cd7c-4251-ad88-da3a570b4270/oak-demo-a-full-proof-edited.mp4). Step timings on a warm VM:
+  build+crash 12 s, reference test 16 s, regression test 12 s, build+success upload 20 s — the whole crash→fix→success
+  loop is ~1 min of machine time. First attempt stopped itself on an "unexpected" diff (demo/pre-fix had gained a kit-only
+  commit after PR #3 branched) — compare against merge-base b1df8ca8, not the branch tip.
+- Rehearsal 1 PR #2 closed by the fixed reset.sh (name collision); PR #3 kept open as fallback; proof comment posted on PR #3.
+- Blueprint snapshot: org build sbj-c8d32726348a4b48a6cac06ab03e0096 (00:35–00:55 UTC) — jackrabbit-oak group **passed**
+  (install Maven 0 s, mirror, Azurite pull 4 s, `mvn -q install -pl oak-blob-cloud-azure -am … -T 4` = 47 s). Overall job
+  status "partial" only because unrelated repos in the org blueprint (hcm-demo wget from repo1.maven.org, gimp, neon, …) failed.
+  Rehearsals 1–2 started before 00:55 so they ran cold; rehearsal 3 (started 01:04 UTC, https://devin-gtm.devinenterprise.com/sessions/8ef1f062d48c447cac3297d6d5af7b9c) is the first on the warm snapshot.
+- Rehearsal 3 (warm snapshot, Ultra): created 01:04:02 → PR https://github.com/michael-cog-gtm/jackrabbit-oak/pull/4 at 01:08:38 =
+  **4 min 36 s**; "Done" 01:08:58; CI (Devin Review) green 01:11:08. 2 files (+36/−7): AzureBlobStoreBackendV8 + its test. 548 tests green.
+  Branch chosen: issue/OAK-12164-v8-limits (no collision). Same follow-up question about the 190 TiB cap as runs 1–2.
+- Summary: 3/3 rehearsals succeeded on every criterion (OOM reproduced, failing test, v8-only fix, OAK-12164 commit, RAT header,
+  no Guava, identical upload passes, PR with before/after). Cost ≈ 5 ACUs per rehearsal.
