@@ -1,0 +1,49 @@
+Repo: github.com/michael-cog-gtm/jackrabbit-oak
+PR: #1
+Commit: f14f6e3ee6bb838308b8c997d794756932ec4ae7
+Findings: 4 (severities: bug, reviewer, security)
+Accepted: 2026-10-24 00:24:03 UTC
+
+NOTE: These findings come from an automated reviewer with less context than you. It can surface false positives and misdiagnose root causes, so treat its findings as good faith hypotheses for bugs, not as confirmed bugs.
+
+Your task is to triage these findings and decide whether to fix, dismiss, or escalate each finding. A suggested process:
+1. Filter: decide which findings to dismiss or escalate.
+  - Dismiss findings that describe intended behavior or are not real issues. Also dismiss low-severity nits, and real issues whose solution is not worth the additional complexity. Dismissed findings should be given a one-line cause.
+  - A finding may accurately describe the code's behavior, but that does not indicate that the code's behavior is _wrong_. Before you autofix, you must be able to name a specific case (an input or state) where the code produces a wrong result.
+  - When you are not fully confident that a finding should be fixed or dismissed, escalate it. Also escalate if a correct fix would reach beyond the PR's scope or requires user input. Reply in one or two sentences: what goes wrong if it ships as is, and what you recommend. The finding already explains the details; do not restate them.
+  - Do NOT change code for dismissed or escalated findings. If you are asked to report triage, mark dismissed findings `dismissed` (they are not posted) and escalated ones `needs_human`. Otherwise reply on the corresponding PR thread with your assessment — or tell the user directly if the finding has no thread — and leave the decision to the user.
+2. Fix the remaining findings.
+  - If two findings share the same root cause, solve them together.
+  - The flagged lines are often not the best place to fix the bug. You should trace the root cause of the bug and solve it there. Suggested changes tend to be local, and while they can be right, do not over-anchor on them.
+  - The fix may not be local, but it should be minimal. Make the minimal change that solves the root cause, consistent with the intentions of the PR.
+  - A finding on code you changed for an earlier finding means that fix was wrong: rework or revert it rather than patch on top. A diff that keeps growing over review rounds is itself a problem.
+
+Findings reflect the review run and stay listed here even after their threads are replied to or resolved; read the thread (e.g. git_view_pr) before acting on a finding that may already have been handled.
+
+[bug] Blob enumeration includes metadata records
+  Finding id: BUG_pr-review-job-6aa5d8fdca654c51ae2184985ddc6495_0001
+  File: oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/AzureBlobStoreBackend.java:388-405
+  PR comment: https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1#discussion_r4365294542
+  PR comment id: 4365294542 (reply on this thread with git_comment_on_pr using this value as in_reply_to)
+  Once `init` creates `META/reference.key`, `getAllIdentifiers` includes it and converts its name to a null identifier. `listBlobs()` returns blobs under `META`, unlike the legacy non-flat listing. Blob enumeration fails or presents metadata as binary records.
+
+[bug] Large binary uploads use oversized blocks
+  Finding id: BUG_pr-review-job-6aa5d8fdca654c51ae2184985ddc6495_0002
+  File: oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/AzureBlobStoreBackend.java:286-290
+  PR comment: https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1#discussion_r4365294609
+  PR comment id: 4365294609 (reply on this thread with git_comment_on_pr using this value as in_reply_to)
+  When a file exceeds 4000 MiB, `uploadBlob` sets its block size to the entire file length. Azure limits each staged block to 4000 MiB, so the binary upload fails.
+
+[bug] Connection strings bypass the configured proxy
+  Finding id: BUG_pr-review-job-6aa5d8fdca654c51ae2184985ddc6495_0003
+  File: oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/AzureBlobContainerProvider.java:164-166
+  PR comment: https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1#discussion_r4365294704
+  PR comment id: 4365294704 (reply on this thread with git_comment_on_pr using this value as in_reply_to)
+  When `azureConnectionString` is set, `getBlobContainer` bypasses the proxy configured in `properties`. The connection-string builder also omits `retryOptions`, so configured network and retry settings do not apply.
+
+[security] Verbose logs expose Azure SAS tokens
+  Finding id: SEC_pr-review-job-6aa5d8fdca654c51ae2184985ddc6495_0001
+  File: oak-blob-cloud-azure/src/main/java/org/apache/jackrabbit/oak/blob/cloud/azure/blobstorage/AzureHttpRequestLoggingPolicy.java:58-62
+  PR comment: https://github.com/michael-cog-gtm/jackrabbit-oak/pull/1#discussion_r4365294765
+  PR comment id: 4365294765 (reply on this thread with git_comment_on_pr using this value as in_reply_to)
+  With verbose logging enabled, `getUrl()` includes the SAS query string in application logs. Readers of those logs can reuse a signed blob URL until it expires.

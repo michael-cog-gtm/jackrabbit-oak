@@ -1,21 +1,29 @@
 #!/usr/bin/env bash
 # Put the repo back into the pre-demo state so the live run can be repeated.
-#   demo/reset.sh            # park the rehearsal branch/PR (kept as fallback), verify demo/pre-fix
-#   demo/reset.sh --delete   # delete the rehearsal branch instead of parking it
+#   demo/reset.sh            # archive issue/OAK-12164* branches under rehearsal/<stamp>/…, verify demo/pre-fix
+#   demo/reset.sh --delete   # delete them instead of archiving
+# The fallback PR's branch (KEEP_BRANCHES) is never touched.
+#
+# Why copy+delete instead of GitHub's "rename branch": a rename leaves a redirect, so the next
+# session's push to issue/OAK-12164 re-attaches the parked PR to the old name (seen in rehearsal 2).
+# Deleting the branch closes its PR; the closed PR keeps its diff and before/after evidence.
 set -euo pipefail
 REPO=michael-cog-gtm/jackrabbit-oak
+ISSUE_PREFIX=issue/OAK-12164
+KEEP_BRANCHES=${KEEP_BRANCHES:-issue/OAK-12164-v8-part-size}   # fallback PR #3
 PRE_FIX_SHA=${PRE_FIX_SHA:-}          # set to pin the expected tip; otherwise just reported
-ISSUE_BRANCH=issue/OAK-12164
 STAMP=$(date -u +%Y%m%d-%H%M%S)
 
-for b in $(gh api "repos/$REPO/branches?per_page=100" --jq '.[].name' | grep -E "^${ISSUE_BRANCH}" || true); do
-  if [ "${1:-}" = "--delete" ]; then
-    echo "deleting $b"; gh api -X DELETE "repos/$REPO/git/refs/heads/$b" >/dev/null
-  else
+for b in $(gh api "repos/$REPO/branches?per_page=100" --jq '.[].name' | grep -E "^${ISSUE_PREFIX}" || true); do
+  case " $KEEP_BRANCHES " in *" $b "*) echo "keeping $b (fallback PR)"; continue;; esac
+  sha=$(gh api "repos/$REPO/git/ref/heads/$b" --jq '.object.sha')
+  if [ "${1:-}" != "--delete" ]; then
     new="rehearsal/$STAMP/${b//\//-}"
-    echo "parking $b -> $new (its PR moves with it and stays open)"
-    gh api -X POST "repos/$REPO/branches/$b/rename" -f new_name="$new" >/dev/null
+    gh api -X POST "repos/$REPO/git/refs" -f ref="refs/heads/$new" -f sha="$sha" >/dev/null
+    echo "archived $b ($sha) -> $new"
   fi
+  gh api -X DELETE "repos/$REPO/git/refs/heads/$b" >/dev/null
+  echo "deleted $b (its PR, if any, is now closed but still readable)"
 done
 
 tip=$(gh api "repos/$REPO/branches/demo/pre-fix" --jq '.commit.sha')
