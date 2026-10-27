@@ -1610,8 +1610,7 @@ public class AzureBlobStoreBackendV8Test {
       org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadOptions uploadOptions =
           org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadOptions.DEFAULT;
 
-      // Use a larger file size to ensure we get 2 parts (2 * 256KB = 512KB)
-      long uploadSize = 2L * 256L * 1024L; // 512KB to ensure 2 parts
+      long uploadSize = 2L * AzureBlobStoreBackendV8.MIN_MULTIPART_UPLOAD_PART_SIZE;
       org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUpload upload =
           backend.initiateHttpUpload(uploadSize, 2, uploadOptions);
       assertNotNull("Upload should not be null when expiry is enabled", upload);
